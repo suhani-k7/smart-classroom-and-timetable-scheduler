@@ -2,8 +2,6 @@
 
 A configurable, constraint-based academic timetable scheduling system that automatically generates feasible timetables while coordinating **faculty, courses, student sections, classrooms, availability, and scheduling requirements**.
 
-> **Note:** The project currently uses a realistic representative dataset rather than complete MAIT institutional data.
-
 ## Features
 
 - Automatic timetable generation
@@ -41,6 +39,7 @@ Soft-Constraint Scoring
 Independent Validation
 
 The scheduler prioritizes feasibility first, ensuring that hard constraints are satisfied before optimizing timetable quality.
+```
 
 ## Core Constraints
 
