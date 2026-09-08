@@ -1,0 +1,10 @@
+{
+  "name": "timetable-scheduler-poc",
+  "version": "1.0.0",
+  "description": "Smart Classroom & Timetable Scheduler - Scheduling Engine PoC (CSP + Heuristic Search)",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "license": "MIT"
+}
