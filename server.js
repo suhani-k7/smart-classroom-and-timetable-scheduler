@@ -9,10 +9,16 @@
 
 const express = require("express");
 const path = require("path");
+
 const baseData = require("./data/seedData");
 const { generateTimetable } = require("./src/scheduler");
 const { validateTimetable } = require("./src/validator");
-const { scoreTimetable } = require("./src/scorer");
+// Soft-constraint scoring (S1-S3) is intentionally NOT wired in right now.
+// It's fully implemented and tested in src/scorer.js - deferred to future
+// scope so the current prototype demo focuses purely on feasibility (H1-H8).
+// To re-enable: uncomment the import above/below and the two lines marked
+// "SOFT SCORING" further down.
+// const { scoreTimetable } = require("./src/scorer");
 
 const app = express();
 app.use(express.json());
@@ -65,14 +71,13 @@ app.post("/api/generate", (req, res) => {
     }
 
     const validation = validateTimetable(result.timetable, data);
-    const score = scoreTimetable(result.timetable, data);
+    // SOFT SCORING (deferred - future scope): const score = scoreTimetable(result.timetable, data);
 
     res.json({
       feasible: true,
       timetable: result.timetable,
       stats: result.stats,
       validation,
-      score,
       days: DAYS,
       slots: SLOTS,
       sections: SECTIONS

@@ -9,7 +9,9 @@
 const data = require("./data/seedData");
 const { generateTimetable } = require("./src/scheduler");
 const { validateTimetable } = require("./src/validator");
-const { scoreTimetable } = require("./src/scorer");
+// Soft-constraint scoring (S1-S3) is fully implemented and tested in
+// src/scorer.js, but deferred to future scope for the current prototype.
+// const { scoreTimetable } = require("./src/scorer");
 
 function printSectionTimetable(timetable, sectionId, data) {
   const { DAYS, SLOTS } = data;
@@ -60,13 +62,7 @@ function main() {
     arr.forEach(v => console.log(`      - ${v}`));
   });
 
-  console.log("\nCalculating S1-S3 soft-constraint score...");
-  const score = scoreTimetable(result.timetable, data);
-  console.log(`Total soft-constraint penalty: ${score.totalPenalty} (lower is better)`);
-  Object.entries(score.breakdown).forEach(([key, val]) => {
-    console.log(`  ${key}: penalty ${val.penalty}`);
-    val.details.forEach(d => console.log(`      - ${d}`));
-  });
+  console.log("\n(Soft-constraint scoring S1-S3 is deferred to future scope for this prototype.)");
 
   data.SECTIONS.forEach(section => {
     printSectionTimetable(result.timetable, section.id, data);
@@ -75,7 +71,6 @@ function main() {
   console.log("\n=== SUMMARY ===");
   console.log(`Feasible: ${result.feasible}`);
   console.log(`Hard violations: ${validation.totalViolations}`);
-  console.log(`Soft penalty score: ${score.totalPenalty}`);
 }
 
 main();
