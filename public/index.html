@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Smart Classroom & Timetable Scheduler - PoC UI</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 text-slate-800">
+
+  <div class="max-w-6xl mx-auto p-6">
+    <h1 class="text-2xl font-bold mb-1">Smart Classroom & Timetable Scheduler</h1>
+    <p class="text-slate-500 mb-6">Edit the dataset below, then click Generate. This calls the real CSP + heuristic search engine.</p>
+
+    <div class="flex gap-3 mb-6">
+      <button id="resetBtn" class="px-4 py-2 rounded bg-slate-300 hover:bg-slate-400 font-medium">Reset to Default Data</button>
+      <button id="generateBtn" class="px-4 py-2 rounded bg-indigo-600 hover:bg-indigo-700 text-white font-medium">Generate Timetable</button>
+    </div>
+
+    <!-- ===== COURSES ===== -->
+    <section class="bg-white rounded-lg shadow p-4 mb-6">
+      <h2 class="font-semibold text-lg mb-3">Courses</h2>
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-slate-500 border-b">
+            <th class="py-1">Course ID</th>
+            <th>Sessions / week</th>
+            <th>Room type needed</th>
+          </tr>
+        </thead>
+        <tbody id="coursesTable"></tbody>
+      </table>
+    </section>
+
+    <!-- ===== SECTIONS ===== -->
+    <section class="bg-white rounded-lg shadow p-4 mb-6">
+      <h2 class="font-semibold text-lg mb-3">Sections</h2>
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-slate-500 border-b">
+            <th class="py-1">Section ID</th>
+            <th>Student count</th>
+          </tr>
+        </thead>
+        <tbody id="sectionsTable"></tbody>
+      </table>
+    </section>
+
+    <!-- ===== ROOMS ===== -->
+    <section class="bg-white rounded-lg shadow p-4 mb-6">
+      <h2 class="font-semibold text-lg mb-3">Rooms</h2>
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-slate-500 border-b">
+            <th class="py-1">Room ID</th>
+            <th>Type</th>
+            <th>Capacity</th>
+          </tr>
+        </thead>
+        <tbody id="roomsTable"></tbody>
+      </table>
+    </section>
+
+    <!-- ===== FACULTY (availability grid) ===== -->
+    <section class="bg-white rounded-lg shadow p-4 mb-6">
+      <h2 class="font-semibold text-lg mb-3">Faculty availability</h2>
+      <p class="text-xs text-slate-500 mb-3">Check a box to mark that faculty member <b>UNAVAILABLE</b> at that day/slot (this tests hard constraint H4).</p>
+      <div id="facultyGrids" class="space-y-6"></div>
+    </section>
+
+    <!-- ===== RESULTS ===== -->
+    <section id="resultsSection" class="bg-white rounded-lg shadow p-4 mb-10 hidden">
+      <h2 class="font-semibold text-lg mb-3">Results</h2>
+      <div id="resultsSummary" class="mb-4"></div>
+      <div id="resultsValidation" class="mb-4"></div>
+      <div id="resultsScore" class="mb-4"></div>
+      <div id="resultsTimetables"></div>
+    </section>
+  </div>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -9,7 +9,6 @@ A configurable, constraint-based academic timetable scheduling system that autom
 - Backtracking with **MRV (Minimum Remaining Values)**
 - Faculty, room, section, and availability management
 - Hard-constraint validation
-- Soft-constraint quality scoring
 - Infeasibility detection
 - Weekly timetable visualization
 
@@ -52,7 +51,7 @@ The system handles constraints such as:
 - Room availability
 - Room capacity
 - Faculty-course eligibility
-- Required sessions
+- Required number of classes
 
 ## Scope
 
