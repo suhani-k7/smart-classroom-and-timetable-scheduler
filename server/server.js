@@ -29,7 +29,6 @@ const { validateTimetable } = require("./src/validator");
 
 const app = express();
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "public")));
 
 // ------------------------------------------------------------------
 // SERVER-SIDE STATE ("fake database" for the prototype)
@@ -90,6 +89,11 @@ function runEngine(dataset) {
 // Current working dataset (whatever's been edited so far, admin or teacher).
 app.get("/api/dataset", (req, res) => {
   res.json(serverState);
+});
+
+// Original seed data (never changes) – React uses this as the baseline
+app.get("/api/dataset/default", (req, res) => {
+  res.json(freshStateFromSeed());
 });
 
 // Wipe all edits and go back to the original seed dataset.
@@ -168,6 +172,18 @@ app.post("/api/faculty/:id/personal-timetable", (req, res) => {
     console.error(err);
     res.status(500).json({ error: err.message });
   }
+});
+
+// ------------------------------------------------------------------
+// REACT FRONTEND (built files from client/dist)
+// ------------------------------------------------------------------
+const distPath = path.join(__dirname, "../client/dist");
+app.use(express.static(distPath));
+
+// Any non-API URL (e.g. /admin, /teacher) -> send React's index.html,
+// and React Router decides which page to show.
+app.get(/^\/(?!api).*/, (req, res) => {
+  res.sendFile(path.join(distPath, "index.html"));
 });
 
 const PORT = process.env.PORT || 3001;

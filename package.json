@@ -1,0 +1,11 @@
+{
+  "name": "smartsched",
+  "private": true,
+  "scripts": {
+    "server": "npm --prefix server run server",
+    "client": "npm --prefix client run dev",
+    "build": "npm --prefix client run build",
+    "start": "npm run build && npm run server",
+    "test:infeasible": "node server/test-infeasible.js"
+  }
+}
