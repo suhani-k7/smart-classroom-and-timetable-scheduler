@@ -8,9 +8,10 @@ import CoursesTable from "../components/CoursesTable";
 import SectionsTable from "../components/SectionsTable";
 import RoomsTable from "../components/RoomsTable";
 import AvailabilityGrid from "../components/AvailabilityGrid";
+import ChangeSummary from "../components/ChangeSummary";
 
 export default function AdminPage() {
-    const { dataset, error } = useDataset();
+    const { dataset, error, revert } = useDataset();
     const [result, setResult] = useState(null);
     const [loading, setLoading] = useState(false);
 
@@ -51,18 +52,27 @@ export default function AdminPage() {
 
             {/* Action bar */}
             <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4 mb-6 flex flex-wrap items-center justify-between gap-4 sticky top-3 z-10">
-                <button
-                    onClick={handleGenerate}
-                    disabled={loading}
-                    className="px-5 py-2.5 rounded-md bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 disabled:cursor-not-allowed text-white font-medium text-sm transition-colors shadow-sm"
-                >
-                    {loading ? "Generating..." : "Generate Timetable"}
-                </button>
+                <div className="flex flex-wrap items-center gap-3">
+                    <button
+                        onClick={handleGenerate}
+                        disabled={loading}
+                        className="px-5 py-2.5 rounded-md bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 disabled:cursor-not-allowed text-white font-medium text-sm transition-colors shadow-sm"
+                    >
+                        {loading ? "Generating..." : "Generate Timetable"}
+                    </button>
+                    <button
+                        onClick={() => { revert(); setResult(null); }}
+                        disabled={loading}
+                        className="px-4 py-2.5 rounded-md bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-700 font-medium text-sm transition-colors border border-slate-300"
+                    >
+                        Reset to Default Data
+                    </button>
+                </div>
                 <span className="text-xs text-slate-600">
                     {loading ? "Running CSP search..." : "Ready to schedule."}
                 </span>
             </div>
-
+            <ChangeSummary />
             {/* Configuration: courses (left), sections + rooms (right) */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <CoursesTable />
