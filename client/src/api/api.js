@@ -25,3 +25,18 @@ export async function resetDataset() {
   if (!res.ok) throw new Error("Reset failed");
   return res.json();
 }
+export async function saveAvailability(facultyId, unavailable) {
+  const res = await fetch(`/api/faculty/${facultyId}/availability`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ unavailable }),
+  });
+  if (!res.ok) throw new Error("Could not save availability");
+  return res.json();
+}
+
+export async function getPersonalTimetable(facultyId) {
+  const res = await fetch(`/api/faculty/${facultyId}/personal-timetable`, { method: "POST" });
+  if (!res.ok) throw new Error("Could not load timetable");
+  return res.json();
+}
