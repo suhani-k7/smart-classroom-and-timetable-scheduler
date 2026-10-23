@@ -4,6 +4,9 @@ import { useDataset } from "../context/DatasetContext";
 import { generateTimetable } from "../api/api";
 import TimetableGrid from "../components/TimetableGrid";
 import ValidationPanel from "../components/ValidationPanel";
+import CoursesTable from "../components/CoursesTable";
+import SectionsTable from "../components/SectionsTable";
+import RoomsTable from "../components/RoomsTable";
 
 export default function AdminPage() {
   const { dataset, error } = useDataset();
@@ -59,8 +62,16 @@ export default function AdminPage() {
         </span>
       </div>
 
-      {/* Configuration components will go here (Steps 16–19) */}
+        {/* Configuration: courses (left), sections + rooms (right) */}
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <CoursesTable />
+        <div className="space-y-6">
+            <SectionsTable />
+            <RoomsTable />
+        </div>
+    </div>
 
+{/* Faculty availability will go here (Step 18) */}
       {/* Results */}
       {result && (
         <section className="bg-white rounded-lg shadow-sm border border-slate-200 p-4 sm:p-5 mb-10">
