@@ -1,8 +1,10 @@
 # Smart Classroom & Timetable Scheduler (SmartSched)
 
-A configurable, constraint-based academic timetable scheduler that automatically generates **conflict-free weekly timetables** while coordinating faculty, courses, student sections, classrooms and availability, or clearly reports when no valid timetable exists.
+A configurable, constraint-based academic timetable scheduler that generates **conflict-free** weekly timetables by coordinating faculty, courses, student sections, classrooms, and availability. The system uses **Constraint Satisfaction Problem (CSP)** techniques, **backtracking**, and the **Minimum Remaining Values (MRV)** heuristic to find feasible schedules, independently validates hard constraints (H1–H8), and reports when a valid timetable cannot be generated.
 
-> **Status:** Working prototype (B.Tech Minor Project). Uses a representative synthetic dataset; database persistence and authentication are planned.
+
+
+> **Status:** Working prototype for a B.Tech Minor Project. Uses PostgreSQL for persistent data storage and a representative synthetic academic dataset. 
 
 ---
 
