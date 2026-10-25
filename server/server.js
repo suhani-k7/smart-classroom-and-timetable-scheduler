@@ -93,7 +93,7 @@ app.get("/api/dataset", async (req, res) => {
 
 app.get("/api/dataset/default", (req, res) => {
   // Seed file is still the definition of "default"
-  const s = require("./data/seedData");
+  const s = require(process.env.SEED === "large" ? "./data/seedDataLarge" : "./data/seedData");
   res.json(JSON.parse(JSON.stringify({
     DAYS: s.DAYS, SLOTS: s.SLOTS, FACULTY: s.FACULTY,
     ROOMS: s.ROOMS, COURSES: s.COURSES, SECTIONS: s.SECTIONS,

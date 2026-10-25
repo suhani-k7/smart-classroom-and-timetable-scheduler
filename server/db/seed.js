@@ -1,5 +1,5 @@
 const pool = require("./pool");
-const seedData = require("../data/seedData");
+const seedData = require(process.env.SEED === "large" ? "../data/seedDataLarge" : "../data/seedData");
 
 // Inserts the seed dataset. Used by `npm run db:seed` and by POST /api/reset.
 async function seedDatabase(client) {

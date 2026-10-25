@@ -43,6 +43,7 @@ function buildStaticDomain(variable, data) {
   const domain = [];
   DAYS.forEach(day => {
     SLOTS.forEach(slot => {
+      if (slot === "12-01") return;
       suitableRooms.forEach(room => {
         // H5: room availability
         if (isUnavailable(room.unavailable, day, slot)) return;
