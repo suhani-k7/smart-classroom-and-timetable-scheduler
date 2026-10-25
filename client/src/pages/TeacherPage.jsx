@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useDataset } from "../context/DatasetContext";
-import { saveAvailability, getPersonalTimetable } from "../api/api";
 import AvailabilityGrid from "../components/AvailabilityGrid";
 import Legend from "../components/Legend";
 import PersonalTimetable from "../components/PersonalTimetable";
+import { saveAvailability, getMyTimetable, regenerateForFaculty, getNotifications, markNotificationsRead } from "../api/api";
+import NotificationPanel from "../components/NotificationPanel";
+
 
 export default function TeacherPage() {
   const { dataset, saved, error, markFacultySaved } = useDataset();
@@ -13,6 +15,7 @@ export default function TeacherPage() {
   const [afterRegen, setAfterRegen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState(null);    // { kind, text }
+  const [notifications, setNotifications] = useState([]);
 
   if (error) return <p className="p-6 text-red-600">Error: {error}</p>;
   if (!dataset) return <p className="p-6">Loading...</p>;
@@ -25,13 +28,20 @@ export default function TeacherPage() {
 
   async function selectFaculty(id) {
     setFacultyId(id);
-    setResult(null); setPrevious(null); setAfterRegen(false); setFeedback(null);
+    setResult(null); setPrevious(null); setAfterRegen(false); setFeedback(null); setNotifications([]);
     if (!id) return;
     try {
-      setResult(await getPersonalTimetable(id));   // current (baseline) schedule
+      const [tt, notes] = await Promise.all([getMyTimetable(id), getNotifications(id)]);
+      setResult(tt);
+      setNotifications(notes);
     } catch (e) {
-      setFeedback({ kind: "bad", text: `Failed to load schedule: ${e.message}` });
+      setFeedback({ kind: "bad", text: `Failed to load: ${e.message}` });
     }
+  }
+
+  async function dismissNotifications() {
+    await markNotificationsRead(facultyId);
+    setNotifications([]);
   }
 
   async function applyAndRegenerate() {
@@ -40,12 +50,12 @@ export default function TeacherPage() {
     try {
       await saveAvailability(fac.id, fac.unavailable);
       markFacultySaved(fac.id);
-      const r = await getPersonalTimetable(fac.id);
+      const r = await regenerateForFaculty(fac.id);
       setPrevious(result?.feasible ? result.mySessions : null);
       setAfterRegen(true);
       setResult(r);
       if (!r.feasible) setFeedback({ kind: "bad", text: "❌ Infeasible: unable to satisfy all constraints." });
-      else if (r.validation.totalViolations === 0) setFeedback({ kind: "ok", text: "✓ Timetable successfully regenerated (0 hard violations)." });
+      else if (r.validation.totalViolations === 0) setFeedback({ kind: "ok", text: `✓ Timetable successfully regenerated (0 hard violations).${r.notified?.length ? ` ${r.notified.length} other teacher(s) notified of changes.` : ""}` });
       else setFeedback({ kind: "warn", text: `⚠ Schedule generated with ${r.validation.totalViolations} violation(s).` });
     } catch (e) {
       setFeedback({ kind: "bad", text: `❌ Request failed: ${e.message}` });
@@ -61,6 +71,13 @@ export default function TeacherPage() {
     : 0;
   const violations = result?.validation?.totalViolations ?? 0;
   const fbColor = { busy: "text-indigo-600", ok: "text-emerald-700", warn: "text-amber-700", bad: "text-rose-600" };
+
+  const newKeys = new Set(
+    notifications.flatMap((n) => [
+      ...n.details.added.map((s) => `${s.courseId}|${s.sectionId}|${s.day}|${s.slot}`),
+      ...n.details.moved.map((m) => `${m.to.courseId}|${m.to.sectionId}|${m.to.day}|${m.to.slot}`),
+    ])
+  );
 
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-6">
@@ -96,6 +113,7 @@ export default function TeacherPage() {
           {dataset.FACULTY.map((f) => <option key={f.id} value={f.id}>{f.id} - {f.name}</option>)}
         </select>
       </section>
+      {fac && <NotificationPanel notifications={notifications} onDismiss={dismissNotifications} />}
 
       {fac && (
         <section className="bg-white rounded-lg shadow-sm border border-slate-200 p-4 sm:p-5 mb-6">
@@ -179,7 +197,7 @@ export default function TeacherPage() {
                 </div>
               ) : (
                 <div className="overflow-x-auto border border-slate-200 rounded-lg">
-                  <PersonalTimetable sessions={result.mySessions} previous={previous} highlightMoves={afterRegen}
+                  <PersonalTimetable sessions={result.mySessions} previous={previous} highlightMoves={afterRegen} newKeys={newKeys}
                     days={result.days} slots={result.slots} courses={dataset.COURSES} isUnavailable={isUnavailable} />
                 </div>
               )}

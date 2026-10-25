@@ -1,4 +1,4 @@
-export default function PersonalTimetable({ sessions, previous, highlightMoves, days, slots, courses, isUnavailable }) {
+export default function PersonalTimetable({ sessions, previous, highlightMoves, days, slots, courses, isUnavailable, newKeys = new Set() }) {
   const courseName = (id) => courses.find((c) => c.id === id)?.name || id;
   const prevById = Object.fromEntries((previous || []).map((s) => [s.sessionId, s]));
 
@@ -34,6 +34,11 @@ export default function PersonalTimetable({ sessions, previous, highlightMoves, 
                           <span className="text-[10px] font-bold text-amber-900 bg-amber-200 px-1.5 py-0.5 rounded">
                             ⚡ Moved from {prev.day} {prev.slot}
                           </span>
+                        </div>
+                      )}
+                      {newKeys.has(`${s.courseId}|${s.sectionId}|${s.day}|${s.slot}`) && (
+                        <div className="pt-1 border-t border-emerald-200">
+                          <span className="text-[10px] font-bold text-emerald-900 bg-emerald-200 px-1.5 py-0.5 rounded">🆕 New class</span>
                         </div>
                       )}
                     </div>

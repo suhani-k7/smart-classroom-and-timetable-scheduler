@@ -134,6 +134,44 @@ async function getRun(id) {
   return { ...run.rows[0], timetable: sessions.rows };
 }
 
+// ---------- Published timetable = latest feasible run ----------
+async function getLatestFeasibleRun() {
+  const r = await pool.query(
+    `SELECT id, created_at, nodes_explored, validation, config_snapshot
+     FROM timetable_runs WHERE feasible ORDER BY id DESC LIMIT 1`);
+  if (r.rowCount === 0) return null;
+  const run = r.rows[0];
+  const s = await pool.query(
+    `SELECT session_id AS "sessionId", section_id AS "sectionId", course_id AS "courseId",
+            faculty_id AS faculty, room_id AS room, day, slot
+     FROM run_sessions WHERE run_id=$1`, [run.id]);
+  return { ...run, timetable: s.rows };
+}
+
+// ---------- Notifications ----------
+async function createNotifications(runId, items) {
+  for (const n of items)
+    await pool.query(
+      `INSERT INTO notifications(faculty_id, run_id, triggered_by, summary, details)
+       VALUES ($1,$2,$3,$4,$5)`,
+      [n.facultyId, runId, n.triggeredBy, n.summary, JSON.stringify(n.details)]);
+}
+
+async function getNotifications(facultyId, unreadOnly = true) {
+  const { rows } = await pool.query(
+    `SELECT id, run_id, triggered_by, summary, details, created_at, read_at
+     FROM notifications
+     WHERE faculty_id=$1 ${unreadOnly ? "AND read_at IS NULL" : ""}
+     ORDER BY id DESC LIMIT 20`, [facultyId]);
+  return rows;
+}
+
+async function markNotificationsRead(facultyId) {
+  await pool.query(
+    "UPDATE notifications SET read_at=now() WHERE faculty_id=$1 AND read_at IS NULL", [facultyId]);
+}
+
 module.exports = {
   loadDataset, saveDataset, saveFacultyAvailability, saveRun, listRuns, getRun,
+  getLatestFeasibleRun, createNotifications, getNotifications, markNotificationsRead,
 };

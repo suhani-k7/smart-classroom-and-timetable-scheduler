@@ -29,6 +29,7 @@ const { validateTimetable } = require("./src/validator");
 require("dotenv").config();
 const repo = require("./db/repository");
 const { seedDatabase } = require("./db/seed");
+const { diffByFaculty, summarize } = require("./src/notify");
 
 const app = express();
 app.use(express.json());
@@ -77,12 +78,28 @@ function runEngine(dataset) {
 // ------------------------------------------------------------------
 
 // ---------- Helper: run engine, time it, save the run ----------
-async function generateAndSave(dataset) {
+// trigger = { by: "Admin" } or { by: "Dr. X (availability change)", facultyId: "F1" }
+async function generateAndSave(dataset, trigger = { by: "Admin", facultyId: null }) {
+  const previous = await repo.getLatestFeasibleRun();   // published timetable BEFORE this run
+
   const t0 = Date.now();
   const result = runEngine(dataset);
   const duration = Date.now() - t0;
   const { runId, createdAt } = await repo.saveRun(dataset, result, duration);
-  return { ...result, runId, createdAt, durationMs: duration };
+
+  let notified = [];
+  if (result.feasible && previous) {
+    const diffs = diffByFaculty(previous.timetable, result.timetable);
+    const items = Object.entries(diffs)
+      .filter(([facultyId]) => facultyId !== trigger.facultyId)   // don't notify the person who made the change
+      .map(([facultyId, details]) => ({
+        facultyId, details, triggeredBy: trigger.by, summary: summarize(details),
+      }));
+    await repo.createNotifications(runId, items);
+    notified = items.map((i) => i.facultyId);
+  }
+
+  return { ...result, runId, createdAt, durationMs: duration, notified };
 }
 
 // ---------- GENERAL / ADMIN ----------
@@ -160,12 +177,53 @@ app.put("/api/faculty/:id/availability", async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ error: err.message }); }
 });
 
-app.post("/api/faculty/:id/personal-timetable", async (req, res) => {
+// Teacher views the PUBLISHED timetable (latest feasible run) – no regeneration
+app.get("/api/faculty/:id/timetable", async (req, res) => {
   try {
-    const result = runEngine(await repo.loadDataset());
-    if (!result.feasible) return res.json(result);
-    res.json({ ...result, mySessions: result.timetable.filter((s) => s.faculty === req.params.id) });
+    let run = await repo.getLatestFeasibleRun();
+    if (!run) {                                   // nothing published yet → generate once
+      await generateAndSave(await repo.loadDataset(), { by: "System" });
+      run = await repo.getLatestFeasibleRun();
+    }
+    if (!run) return res.json({ feasible: false, reason: "No feasible timetable has been generated yet." });
+    res.json({
+      feasible: true,
+      runId: run.id,
+      publishedAt: run.created_at,
+      days: run.config_snapshot.DAYS,
+      slots: run.config_snapshot.SLOTS,
+      stats: { nodesExplored: run.nodes_explored },
+      validation: run.validation,
+      mySessions: run.timetable.filter((s) => s.faculty === req.params.id),
+    });
   } catch (err) { console.error(err); res.status(500).json({ error: err.message }); }
+});
+
+// Teacher applies availability → regenerate + publish + notify others
+app.post("/api/faculty/:id/regenerate", async (req, res) => {
+  try {
+    const dataset = await repo.loadDataset();
+    const fac = dataset.FACULTY.find((f) => f.id === req.params.id);
+    if (!fac) return res.status(404).json({ error: "Faculty not found" });
+
+    const result = await generateAndSave(dataset, {
+      by: `${fac.name} (availability change)`, facultyId: fac.id,
+    });
+    if (!result.feasible) return res.json(result);
+    res.json({ ...result, mySessions: result.timetable.filter((s) => s.faculty === fac.id) });
+  } catch (err) { console.error(err); res.status(500).json({ error: err.message }); }
+});
+
+// Unread notifications for one teacher
+app.get("/api/faculty/:id/notifications", async (req, res) => {
+  try { res.json(await repo.getNotifications(req.params.id, req.query.all !== "1")); }
+  catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Mark all of a teacher's notifications as read
+app.post("/api/faculty/:id/notifications/read", async (req, res) => {
+  try { await repo.markNotificationsRead(req.params.id); res.json({ ok: true }); }
+  catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // ------------------------------------------------------------------

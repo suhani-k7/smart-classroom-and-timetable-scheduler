@@ -1,7 +1,7 @@
 -- =========================================================
 -- SmartSched database schema
 -- =========================================================
-DROP TABLE IF EXISTS run_sessions, timetable_runs,
+DROP TABLE IF EXISTS notifications, run_sessions, timetable_runs,
   faculty_unavailability, room_unavailability,
   faculty_course, section_course,
   faculty, courses, sections, rooms, days, slots CASCADE;
@@ -97,3 +97,15 @@ CREATE TABLE run_sessions (
   slot        TEXT NOT NULL,
   PRIMARY KEY (run_id, session_id)
 );
+-- ---------- Notifications for teachers ----------
+CREATE TABLE notifications (
+  id            SERIAL PRIMARY KEY,
+  faculty_id    TEXT NOT NULL REFERENCES faculty(id) ON DELETE CASCADE,
+  run_id        INT  REFERENCES timetable_runs(id) ON DELETE CASCADE,
+  triggered_by  TEXT,                  -- e.g. "Admin" or "Dr. Sharma (availability change)"
+  summary       TEXT NOT NULL,         -- one-line message
+  details       JSONB NOT NULL,        -- { added: [...], removed: [...], moved: [...] }
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  read_at       TIMESTAMPTZ            -- NULL = unread
+);
+CREATE INDEX notifications_unread ON notifications(faculty_id) WHERE read_at IS NULL;

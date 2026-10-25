@@ -35,10 +35,26 @@ export async function saveAvailability(facultyId, unavailable) {
   return res.json();
 }
 
-export async function getPersonalTimetable(facultyId) {
-  const res = await fetch(`/api/faculty/${facultyId}/personal-timetable`, { method: "POST" });
+export async function getMyTimetable(facultyId) {
+  const res = await fetch(`/api/faculty/${facultyId}/timetable`);
   if (!res.ok) throw new Error("Could not load timetable");
   return res.json();
+}
+
+export async function regenerateForFaculty(facultyId) {
+  const res = await fetch(`/api/faculty/${facultyId}/regenerate`, { method: "POST" });
+  if (!res.ok) throw new Error("Could not regenerate timetable");
+  return res.json();
+}
+
+export async function getNotifications(facultyId) {
+  const res = await fetch(`/api/faculty/${facultyId}/notifications`);
+  if (!res.ok) throw new Error("Could not load notifications");
+  return res.json();
+}
+
+export async function markNotificationsRead(facultyId) {
+  await fetch(`/api/faculty/${facultyId}/notifications/read`, { method: "POST" });
 }
 
 export const listRuns = () => fetch("/api/runs").then((r) => r.json());
