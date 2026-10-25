@@ -26,6 +26,9 @@ const { validateTimetable } = require("./src/validator");
 // It's fully implemented and tested in src/scorer.js - deferred to future
 // scope so the current prototype demo focuses purely on feasibility (H1-H8).
 // const { scoreTimetable } = require("./src/scorer");
+require("dotenv").config();
+const repo = require("./db/repository");
+const { seedDatabase } = require("./db/seed");
 
 const app = express();
 app.use(express.json());
@@ -33,19 +36,6 @@ app.use(express.json());
 // ------------------------------------------------------------------
 // SERVER-SIDE STATE ("fake database" for the prototype)
 // ------------------------------------------------------------------
-function freshStateFromSeed() {
-  // Deep clone so we never accidentally mutate the original seedData module.
-  return {
-    DAYS: seedData.DAYS,
-    SLOTS: seedData.SLOTS,
-    FACULTY: JSON.parse(JSON.stringify(seedData.FACULTY)),
-    ROOMS: JSON.parse(JSON.stringify(seedData.ROOMS)),
-    COURSES: JSON.parse(JSON.stringify(seedData.COURSES)),
-    SECTIONS: JSON.parse(JSON.stringify(seedData.SECTIONS))
-  };
-}
-
-let serverState = freshStateFromSeed();
 
 function rebuildFacultyCourseMap(courses, faculty) {
   const map = {};
@@ -86,92 +76,96 @@ function runEngine(dataset) {
 // GENERAL / ADMIN ROUTES
 // ------------------------------------------------------------------
 
-// Current working dataset (whatever's been edited so far, admin or teacher).
-app.get("/api/dataset", (req, res) => {
-  res.json(serverState);
+// ---------- Helper: run engine, time it, save the run ----------
+async function generateAndSave(dataset) {
+  const t0 = Date.now();
+  const result = runEngine(dataset);
+  const duration = Date.now() - t0;
+  const { runId, createdAt } = await repo.saveRun(dataset, result, duration);
+  return { ...result, runId, createdAt, durationMs: duration };
+}
+
+// ---------- GENERAL / ADMIN ----------
+app.get("/api/dataset", async (req, res) => {
+  try { res.json(await repo.loadDataset()); }
+  catch (err) { console.error(err); res.status(500).json({ error: err.message }); }
 });
 
-// Original seed data (never changes) – React uses this as the baseline
 app.get("/api/dataset/default", (req, res) => {
-  res.json(freshStateFromSeed());
+  // Seed file is still the definition of "default"
+  const s = require("./data/seedData");
+  res.json(JSON.parse(JSON.stringify({
+    DAYS: s.DAYS, SLOTS: s.SLOTS, FACULTY: s.FACULTY,
+    ROOMS: s.ROOMS, COURSES: s.COURSES, SECTIONS: s.SECTIONS,
+  })));
 });
 
-// Wipe all edits and go back to the original seed dataset.
-app.post("/api/reset", (req, res) => {
-  serverState = freshStateFromSeed();
-  res.json(serverState);
+app.post("/api/reset", async (req, res) => {
+  try {
+    await seedDatabase();
+    res.json(await repo.loadDataset());
+  } catch (err) { console.error(err); res.status(500).json({ error: err.message }); }
 });
 
-// Admin view: send a full (possibly edited) dataset, save it as the new
-// server state, and generate + validate off it immediately.
-app.post("/api/generate", (req, res) => {
+app.post("/api/generate", async (req, res) => {
   try {
     if (req.body && req.body.FACULTY && req.body.COURSES) {
-      // Admin submitted a full edited dataset - this becomes the new state.
-      serverState = req.body;
+      await repo.saveDataset(req.body);          // persist admin edits
     }
-    // else: no body (or partial) sent -> just regenerate off current state.
-    // This is what the Teacher View uses after saving one faculty's availability.
-
-    res.json(runEngine(serverState));
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
-  }
+    const dataset = await repo.loadDataset();     // always generate from the DB
+    res.json(await generateAndSave(dataset));
+  } catch (err) { console.error(err); res.status(500).json({ error: err.message }); }
 });
 
-// ------------------------------------------------------------------
-// TEACHER VIEW ROUTES
-// ------------------------------------------------------------------
-
-// Small bits of static config the teacher page needs (days/slots list).
-app.get("/api/meta", (req, res) => {
-  res.json({ DAYS: serverState.DAYS, SLOTS: serverState.SLOTS });
+// ---------- RUN HISTORY ----------
+app.get("/api/runs", async (req, res) => {
+  try { res.json(await repo.listRuns()); }
+  catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// List of faculty for the "log in as" dropdown - id/name/expertise only.
-app.get("/api/faculty-list", (req, res) => {
-  res.json(
-    serverState.FACULTY.map(f => ({ id: f.id, name: f.name, expertise: f.expertise }))
-  );
-});
-
-// One faculty member's full record (used to pre-fill their availability grid).
-app.get("/api/faculty/:id", (req, res) => {
-  const fac = serverState.FACULTY.find(f => f.id === req.params.id);
-  if (!fac) return res.status(404).json({ error: "Faculty not found" });
-  res.json(fac);
-});
-
-// Update ONLY this faculty member's availability. This is the core
-// "teacher changes their own availability" action.
-app.put("/api/faculty/:id/availability", (req, res) => {
-  const fac = serverState.FACULTY.find(f => f.id === req.params.id);
-  if (!fac) return res.status(404).json({ error: "Faculty not found" });
-
-  const { unavailable } = req.body;
-  if (!Array.isArray(unavailable)) {
-    return res.status(400).json({ error: "unavailable must be an array of {day, slot}" });
-  }
-
-  fac.unavailable = unavailable;
-  res.json(fac);
-});
-
-// A faculty member's OWN personal weekly schedule, extracted from a
-// full generated timetable (used by the Teacher View results panel).
-app.post("/api/faculty/:id/personal-timetable", (req, res) => {
+app.get("/api/runs/:id", async (req, res) => {
   try {
-    const result = runEngine(serverState);
-    if (!result.feasible) {
-      return res.json(result); // { feasible: false, reason }
-    }
-    const mySessions = result.timetable.filter(s => s.faculty === req.params.id);
-    res.json({ ...result, mySessions });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
-  }
+    const run = await repo.getRun(Number(req.params.id));
+    if (!run) return res.status(404).json({ error: "Run not found" });
+    res.json(run);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ---------- TEACHER ----------
+app.get("/api/meta", async (req, res) => {
+  const ds = await repo.loadDataset();
+  res.json({ DAYS: ds.DAYS, SLOTS: ds.SLOTS });
+});
+
+app.get("/api/faculty-list", async (req, res) => {
+  const ds = await repo.loadDataset();
+  res.json(ds.FACULTY.map(({ id, name, expertise }) => ({ id, name, expertise })));
+});
+
+app.get("/api/faculty/:id", async (req, res) => {
+  const ds = await repo.loadDataset();
+  const fac = ds.FACULTY.find((f) => f.id === req.params.id);
+  if (!fac) return res.status(404).json({ error: "Faculty not found" });
+  res.json(fac);
+});
+
+app.put("/api/faculty/:id/availability", async (req, res) => {
+  try {
+    const { unavailable } = req.body;
+    if (!Array.isArray(unavailable))
+      return res.status(400).json({ error: "unavailable must be an array of {day, slot}" });
+    const fac = await repo.saveFacultyAvailability(req.params.id, unavailable);
+    if (!fac) return res.status(404).json({ error: "Faculty not found" });
+    res.json(fac);
+  } catch (err) { console.error(err); res.status(500).json({ error: err.message }); }
+});
+
+app.post("/api/faculty/:id/personal-timetable", async (req, res) => {
+  try {
+    const result = runEngine(await repo.loadDataset());
+    if (!result.feasible) return res.json(result);
+    res.json({ ...result, mySessions: result.timetable.filter((s) => s.faculty === req.params.id) });
+  } catch (err) { console.error(err); res.status(500).json({ error: err.message }); }
 });
 
 // ------------------------------------------------------------------

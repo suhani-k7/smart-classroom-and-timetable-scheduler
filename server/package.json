@@ -5,10 +5,15 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "server": "node server.js"
+    "server": "node server.js",
+    "db:schema": "psql smartsched -f db/schema.sql",
+    "db:seed": "node db/seed.js",
+    "db:setup": "npm run db:schema && npm run db:seed"
   },
   "license": "MIT",
   "dependencies": {
-    "express": "^5.2.1"
+    "dotenv": "^18.0.9",
+    "express": "^5.2.1",
+    "pg": "^8.23.1"
   }
 }
