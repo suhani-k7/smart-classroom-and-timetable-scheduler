@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { useDataset } from "../context/DatasetContext";
 import { generateTimetable } from "../api/api";
 import { diffDataset } from "../utils/diff";
@@ -69,12 +68,6 @@ export default function AdminPage() {
 
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-6">
-      <div className="flex gap-4 mb-4 text-sm">
-        <Link to="/admin" className="font-semibold text-indigo-700 border-b-2 border-indigo-700 pb-1">Admin View</Link>
-        <Link to="/teacher" className="text-slate-500 hover:text-indigo-700 pb-1">Teacher View</Link>
-        <Link to="/runs" className="text-slate-500 hover:text-indigo-700 pb-1">Run History</Link>
-      </div>
-
       <header className="mb-6">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
           <h1 className="text-2xl font-bold text-slate-900">Admin Scheduling Dashboard</h1>
@@ -88,7 +81,7 @@ export default function AdminPage() {
       </header>
 
       {/* Action bar */}
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4 mb-6 flex flex-wrap items-center justify-between gap-4 sticky top-3 z-10">
+      <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4 mb-6 flex flex-wrap items-center justify-between gap-4 sticky top-16 z-20">
         <div className="flex flex-wrap items-center gap-3">
           <button onClick={handleGenerate} disabled={loading || resetting}
             className="px-5 py-2.5 rounded-md bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 disabled:cursor-not-allowed text-white font-medium text-sm shadow-sm flex items-center">
