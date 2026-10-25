@@ -16,7 +16,6 @@ A configurable, constraint-based academic timetable scheduler that automatically
 - [Hard Constraints (H1–H8)](#hard-constraints-h1h8)
 - [API Endpoints](#api-endpoints)
 - [Testing](#testing)
-- [Roadmap](#roadmap)
 - [Scope](#scope)
 
 ---
@@ -53,8 +52,8 @@ A configurable, constraint-based academic timetable scheduler that automatically
 | Frontend | React (Vite), React Router, Tailwind CSS |
 | Backend | Node.js, Express.js (REST API) |
 | Scheduling | CSP + Backtracking + MRV heuristic, independent H1–H8 validator |
-| Data | In-memory server state seeded from `server/data/seedData.js` |
-| Database | PostgreSQL *(planned)* |
+| Database | PostgreSQL (via `pg`), normalised schema with saved timetable runs |
+| Data | Seed datasets in `server/data/` (small: 3 sections, large: 5 sections) |
 | Version control | Git, GitHub |
 
 ---
@@ -68,11 +67,18 @@ smart-classroom-and-timetable-scheduler/
 │   │   ├── api/                # fetch calls to the Express API
 │   │   ├── context/            # shared dataset state (DatasetContext)
 │   │   ├── components/         # tables, availability grid, timetable, validation panel
-│   │   ├── pages/              # AdminPage, TeacherPage
+│   │   ├── pages/              # AdminPage, TeacherPage, RunsPage
 │   │   └── utils/              # change-detection (diff) logic
 │   └── index.html
 ├── server/                     # Express API + scheduling engine
-│   ├── data/seedData.js        # representative dataset
+│   ├── data/
+│   │   ├── seedData.js         # small dataset (3 sections, 57 sessions)
+│   │   └── seedDataLarge.js    # large dataset (5 sections, 10 courses)
+│   ├── db/
+│   │   ├── schema.sql          # PostgreSQL tables
+│   │   ├── pool.js             # database connection
+│   │   ├── seed.js             # loads a seed dataset into the database
+│   │   └── repository.js       # all SQL queries (dataset, availability, runs)
 │   ├── src/
 │   │   ├── utils.js            # builds CSP session variables
 │   │   ├── scheduler.js        # CSP + backtracking + MRV
@@ -91,45 +97,53 @@ smart-classroom-and-timetable-scheduler/
 
 ### Prerequisites
 - [Node.js](https://nodejs.org/) 18 or later
-- npm
+- [PostgreSQL](https://www.postgresql.org/) 14 or later
+  - macOS: easiest with [Postgres.app](https://postgresapp.com/), then click **Initialize**
 
-### Installation
-
+### 1. Clone and install
 ```bash
 git clone https://github.com/suhani-k7/smart-classroom-and-timetable-scheduler.git
 cd smart-classroom-and-timetable-scheduler
-
 cd server && npm install
 cd ../client && npm install
 cd ..
 ```
 
-### Run (single app)
+### 2. Set up the database
+```bash
+createdb smartsched
+cd server
+cp .env.example .env        # then edit DATABASE_URL with your username
+npm run db:setup            # creates tables and loads the seed data
+cd ..
+```
+To use the larger dataset, set `SEED=large` in `server/.env` and run `npm run db:seed` again.
 
+### 3. Run
 ```bash
 npm start
 ```
-
-This builds the React app and serves everything at **http://localhost:3001**.
+Open **http://localhost:3001**.
 
 | Page | URL |
 |---|---|
 | Admin dashboard | http://localhost:3001/admin |
 | Teacher view | http://localhost:3001/teacher |
+| Run history | http://localhost:3001/runs |
 
-### Run in development mode (hot reload)
-
-Use two terminals:
-
+### Development mode (hot reload)
 ```bash
-# Terminal 1 – API server (port 3001)
-npm run server
-
-# Terminal 2 – React dev server (port 5173)
-npm run client
+npm run server    # terminal 1 – API on :3001
+npm run client    # terminal 2 – React on :5173
 ```
+Open **http://localhost:5173**.
 
-Then open **http://localhost:5173**. API calls are proxied to port 3001.
+### Useful database commands
+| Command (inside `server/`) | What it does |
+|---|---|
+| `npm run db:schema` | Drops and recreates all tables |
+| `npm run db:seed` | Reloads the seed data (keeps saved runs) |
+| `npm run db:setup` | Both of the above |
 
 ### Run the scheduler from the command line
 
@@ -192,13 +206,15 @@ The scheduler is **feasibility-first**: it guarantees that every hard constraint
 | `GET` | `/api/dataset` | Current working dataset |
 | `GET` | `/api/dataset/default` | Original seed dataset |
 | `POST` | `/api/reset` | Reset server state to the seed dataset |
-| `POST` | `/api/generate` | Save the submitted dataset and generate + validate a timetable |
+| `POST` | `/api/generate` | Save the submitted dataset to the database, generate + validate, and store the run |
 | `GET` | `/api/faculty-list` | Faculty IDs, names and expertise |
 | `GET` | `/api/faculty/:id` | One faculty member's record |
 | `PUT` | `/api/faculty/:id/availability` | Update one faculty member's availability |
 | `POST` | `/api/faculty/:id/personal-timetable` | Generate and return one faculty member's sessions |
+| `GET` | `/api/runs` | Recent timetable generation runs (latest first) |
+| `GET` | `/api/runs/:id` | One run with its full timetable and validation report |
 
-> State is held **in memory** on the server: edits survive a page refresh but reset when the server restarts.
+> All configuration edits and generated runs are stored in **PostgreSQL**, so they survive server restarts. `POST /api/reset` reloads the seed data.
 
 ---
 
