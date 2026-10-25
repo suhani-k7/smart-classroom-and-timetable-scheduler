@@ -30,10 +30,10 @@ export default function CoursesTable() {
           <tbody className="divide-y divide-slate-100">
             {dataset.COURSES.map((c, i) => (
               <tr key={c.id}>
-                <td className="py-2 px-3">
-                  <div className="font-semibold text-slate-900">{c.id}</div>
-                  <div className="text-slate-500">{c.name}</div>
-                </td>
+                <td className="py-2.5 px-3">
+                  <div className="font-bold text-slate-900 text-xs">{c.name || c.id}</div>
+                  <div className="font-mono text-[10px] text-slate-500 mt-0.5">{c.id}</div>
+              </td>
                 <td className="py-2 px-3 text-center">
                   <input
                     type="number" min="1" max="6"

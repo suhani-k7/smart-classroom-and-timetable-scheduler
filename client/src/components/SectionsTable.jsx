@@ -38,6 +38,7 @@ export default function SectionsTable() {
                     onChange={(e) => update(i, parseInt(e.target.value) || 1)}
                     className="w-20 border border-slate-300 rounded px-2 py-1"
                   />
+                  <span className="text-[11px] text-slate-500 ml-1.5">students</span>
                 </td>
                 <td className="py-2 px-3 text-slate-500">{s.courses.length} courses</td>
               </tr>

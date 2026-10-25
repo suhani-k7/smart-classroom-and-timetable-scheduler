@@ -48,6 +48,7 @@ export default function RoomsTable() {
                     onChange={(e) => update(i, "capacity", parseInt(e.target.value) || 1)}
                     className="w-20 border border-slate-300 rounded px-2 py-1"
                   />
+                  <span className="text-[11px] text-slate-500 ml-1.5">seats</span>
                 </td>
               </tr>
             ))}

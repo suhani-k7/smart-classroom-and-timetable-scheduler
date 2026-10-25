@@ -40,3 +40,6 @@ export async function getPersonalTimetable(facultyId) {
   if (!res.ok) throw new Error("Could not load timetable");
   return res.json();
 }
+
+export const listRuns = () => fetch("/api/runs").then((r) => r.json());
+export const getRun = (id) => fetch(`/api/runs/${id}`).then((r) => r.json());
